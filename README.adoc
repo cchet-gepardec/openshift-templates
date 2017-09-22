@@ -1,0 +1,6 @@
+## Useful commands
+Deletes all resources within an project which is useful when a error occurred +
+`oc delete pods,services,imagestreams,routes,builds,buildconfig,deploymentconfig --all`
+
+## Issues
+Git clone via *_git_* protocol fails with *_Host verification failed_* error. +

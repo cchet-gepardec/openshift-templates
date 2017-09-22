@@ -1,123 +1,114 @@
-kind: "Template"
-apiVersion: "v1"
-metadata:
-  name: "gepardec-wildfly"
-  annotations:
-    iconClass: "icon-jboss"
-    tags: "Java"
-    description: "Application template for gepardec wildfly backed web application"
-labels:
-  application: "gepardec-wildfly"
-  createdBy: "het"
-parameters:
-  - name: "APPLICATION_NAME"
-    displayName: "Application name"
-    description: "The name of the application"
-    required: true
-  - name: "APPLICATION_HOSTNAME"
-    displayName: "Application host"
-    description: "The custom hostname of the app for service routes. Leave blank for default host name"
-  - name: "GIT_URI"
-    displayName: "Git url"
-    description: "The uri where the application source resides"
-    required: true
-  - name: "GIT_REF"
-    displayName: "Git branch"
-    description: "The branch to checkout"
-    value: "master"
-objects:
-  - kind: "BuildConfig"
-    apiVersion: "v1"
-    metadata:
-      name: "${APPLICATION_NAME}"
-    spec:
-      # our source comes from a git repository
-      source:
-        type: "git"
-        git:
-          uri: "${GIT_URI}"
-          ref: "${GIT_REF}"
-        contextDir:
-      strategy:
-        # build image from source
-        type: "source"
-        # From which builder image we want to build app image
-        sourceStrategy:
-          from:
-            kind: "ImageStreamTag"
-            namespace: "openshift"
-            name: "wildfly-101-centos7:latest"
-        # this is our app image output
-        output:
-          to:
-            kind: "ImageStreamTag"
-            name: "${APPLICATION_NAME}:latest"
-  - kind: "ImageStream"
-    apiVersion: "v1"
-    metadata:
-      name: "${APPLICATION_NAME}"
-    spec:
-      dockerImageRepository: ""
-      tags:
-        - name: "latest"
-  - kind: "DeploymentConfig"
-    apiVersion: "v1"
-    metadata:
-      name: "${APPLICATION_NAME}"
-      labels:
-        deploymentConfig: "${APPLICATION_NAME}"
-    spec:
-      replicas: 1
-      selector:
-        deploymentConfig: "${APPLICATION_NAME}"
-      template:
-        metadata:
-          labels:
-            deploymentConfig: "${APPLICATION_NAME}"
-        spec:
-          containers:
-            - name: "${APPLICATION_NAME}"
-              image: "${APPLICATION_NAME}"
-              ports:
-                - name: "${APPLICATION_NAME}-http"
-                  containerPort: 8080
-                  protocol: "TCP"
-              readinessProbe:
-                httpGet:
-                  path: "/"
-                  port: 8080
-              env:
-                - name: "TEST_ENV_VAR"
-                  value: "The env valriable for testing env var injection itno container"
-              terminationMessagePath: "/log/termination.log"
-              imagePullPolicy: "Always"
-              securityContext:
-                capabilities:
-                  priviliged: false
-              restartPolicy: "Always"
-              dnsPolicy: "ClusterFirst"
-  - kind: "Route"
-    apiVersion: "v1"
-    metadata:
-     name: "${APPLICATION_NAME}"
-     annotations:
-       description: "Route for the application http service"
-    spec:
-     host: "${APPLICATION_HOSTNAME}"
-     to:
-       kind: "Service"
+  kind: "Template"
+  apiVersion: "v1"
+  metadata:
+    name: "gepardec-wildfly"
+    annotations:
+      iconClass: "icon-jboss"
+      tags: "Java"
+      description: "Application template for gepardec wildfly backed web application"
+  labels:
+    application: "gepardec-wildfly"
+    createdBy: "het"
+  parameters:
+    - name: "APPLICATION_NAME"
+      displayName: "Application name"
+      description: "The name of the application"
+      required: true
+    - name: "APPLICATION_HOSTNAME"
+      displayName: "Application host"
+      description: "The custom hostname of the app for service routes. Leave blank for default host name"
+  objects:
+    - kind: "BuildConfig"
+      apiVersion: "v1"
+      metadata:
+        name: "${APPLICATION_NAME}"
+      spec:
+        # our source comes from a git repository
+        source:
+          type: "git"
+          git:
+            uri: "git@github.com:cchet-gepardec/openshift-web.git"
+            ref: "master"
+          contextDir:
+        strategy:
+          # build image from source
+          type: "source"
+          # From which builder image we want to build app image
+          sourceStrategy:
+            from:
+              kind: "ImageStreamTag"
+              namespace: "openshift"
+              name: "wildfly-101-centos7:latest"
+          # this is our app image output
+          output:
+            to:
+              kind: "ImageStreamTag"
+              name: "${APPLICATION_NAME}:latest"
+    - kind: "ImageStream"
+      apiVersion: "v1"
+      metadata:
+        name: "${APPLICATION_NAME}"
+      spec:
+        tags:
+          - name: "latest"
+    - kind: "DeploymentConfig"
+      apiVersion: "v1"
+      metadata:
+        name: "${APPLICATION_NAME}"
+        labels:
+          deploymentConfig: "${APPLICATION_NAME}"
+      spec:
+        replicas: 1
+        selector:
+          deploymentConfig: "${APPLICATION_NAME}"
+        template:
+          metadata:
+            labels:
+              deploymentConfig: "${APPLICATION_NAME}"
+          spec:
+            containers:
+              - name: "${APPLICATION_NAME}"
+                image: "${APPLICATION_NAME}"
+                ports:
+                  - name: "${APPLICATION_NAME}-http"
+                    containerPort: 8080
+                    protocol: "TCP"
+                readinessProbe:
+                  httpGet:
+                    path: "/"
+                    port: 8080
+                env:
+                  - name: "TEST_ENV_VAR"
+                    value: "The env valriable for testing env var injection itno container"
+                terminationMessagePath: "/log/termination.log"
+                imagePullPolicy: "Always"
+                securityContext:
+                  capabilities:
+                    priviliged: false
+                restartPolicy: "Always"
+                dnsPolicy: "ClusterFirst"
+    - kind: "Route"
+      apiVersion: "v1"
+      metadata:
        name: "${APPLICATION_NAME}"
-  - kind: "Service"
-    apiVersion: "v1"
-    metadata:
-      name: "${APPLICATION_NAME}"
-      annotations:
-        description: "The wildfly server http port"
-    spec:
-      ports:
-        - name: "http-port"
-          protocol: "TCP"
-          port: 8080
-          targetPort: 8080
-      selector:
-        deploymentConfig: "${APPLICATION_NAME}"
+       annotations:
+         description: "Route for the application http service"
+      spec:
+       host: "${APPLICATION_HOSTNAME}"
+       to:
+         kind: "Service"
+         name: "${APPLICATION_NAME}"
+    - kind: "Service"
+      apiVersion: "v1"
+      metadata:
+        name: "${APPLICATION_NAME}"
+        annotations:
+          description: "The wildfly server http port"
+      spec:
+        ports:
+          - name: "http-port"
+            protocol: "TCP"
+            port: 8080
+            targetPort: 8080
+        selector:
+          deploymentConfig: "${APPLICATION_NAME}"
